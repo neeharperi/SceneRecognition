@@ -1,2 +1,4 @@
 data/features/*
 data/places365_standard/*
+models/nn/*
+models/baseline/*
