@@ -46,9 +46,10 @@ class SceneRecognitionDataLoader(Dataset):
                 elif ID >= 50:
                     ID = 50
 
+            imgFile = imgFile.strip("\n")
             self.imageFiles.append((ID, imgFile))
-            
-            featureFile = imgFile.strip("\n").replace("places365_standard", "features").replace("jpg", "pkl")
+        
+            featureFile = imgFile.replace("places365_standard", "features").replace("jpg", "pkl")
             self.featureFiles.append((ID, featureFile))
 
     def __len__(self):
