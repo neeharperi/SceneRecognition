@@ -7,7 +7,7 @@ img_per_cls = 10
 
 root = "places365_standard"
 splits = ["train", "val"]
-cls_list = list(os.listdir(root + "/train/"))[:100]
+cls_list = list(os.listdir(root + "/train/"))[:num_cls]
 cls_map = {}
 for split in splits:
     file = open(split + "_cls.txt", "w")

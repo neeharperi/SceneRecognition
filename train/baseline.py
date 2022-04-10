@@ -17,9 +17,10 @@ import pickle
 import pdb 
 
 class SceneRecognitionDataLoader(Dataset):
-    def __init__(self, file, task, root, transform=None):
+    def __init__(self, file, task, root, mode, transform=None):
         self.file = open(file)
         self.transform = transform
+        self.mode = mode
         self.root = root
         self.imageFiles = []
 
@@ -28,7 +29,7 @@ class SceneRecognitionDataLoader(Dataset):
             ID = int(ID)
 
             imgFile = imgFile.strip("\n")
-            if task == "openset":
+            if mode == "train" and task == "openset":
                 if ID < 50:
                     pass 
 
@@ -37,6 +38,14 @@ class SceneRecognitionDataLoader(Dataset):
 
                 else:
                     continue 
+
+            if mode == "val" and task == "openset":
+                if ID < 50:
+                    pass 
+
+                elif ID >= 50:
+                    ID = 50
+
 
             self.imageFiles.append((ID, imgFile))
 
@@ -52,7 +61,10 @@ class SceneRecognitionDataLoader(Dataset):
 
         ID = torch.tensor(ID)
 
-        return img, ID
+        if self.mode == "train":
+            return img, ID
+        else:
+            return img, ID, imgFile
 
 class ResNet(nn.Module):
     def __init__(self, numClasses, pretrain=False):
@@ -72,10 +84,45 @@ def saveCheckPoint(model, device, modelState):
     torch.save(modelState, fileName)
 
 
+def evaluate(args, model, device, modelState):
+    experiment = args.experiment
+    valFile = args.valFile
+    root = args.root
+    BATCHSIZE = args.batchSize
+    WORKERS = args.workers
+
+    if not os.path.isdir("../evaluate/baseline/" + experiment + "/"):
+        os.makedirs("../evaluate/baseline/" + experiment + "/")
+
+    fileName = "../evaluate/baseline/" + modelState["experimentName"] + "/modelCheckPoint" + str(modelState["Epoch"]) + ".txt"
+
+    file = open(fileName, "w")
+
+    transform = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    ValDataset = SceneRecognitionDataLoader(valFile, experiment, root, "val", transform)
+    valData = DataLoader(ValDataset, batch_size=BATCHSIZE, shuffle=False, num_workers=WORKERS)
+
+    model.eval()
+
+    with torch.no_grad():
+        for data in valData:
+            img, target, imgFile = data
+
+            img = img.to(device)
+            target = target.to(device)
+
+            pred = torch.argmax(model(img), axis=1)
+            
+            for predID, predFile in zip(pred, imgFile):
+                file.write(str(predID.item()) + " " + predFile + "\n")                
+
+    file.close()
+
 def train(args):
     experiment = args.experiment
     numClasses = args.numClasses
-    dataFile = args.dataFile
+    trainFile = args.trainFile
     root = args.root
     BATCHSIZE = args.batchSize
     EPOCH = args.numEpoch
@@ -92,7 +139,7 @@ def train(args):
 
     transform = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    TrainDataset = SceneRecognitionDataLoader(dataFile, experiment, root, transform)
+    TrainDataset = SceneRecognitionDataLoader(trainFile, experiment, root, "train", transform)
     trainData = DataLoader(TrainDataset, batch_size=BATCHSIZE, shuffle=True, num_workers=WORKERS)
 
     model = ResNet(numClasses, pretrain)
@@ -126,7 +173,6 @@ def train(args):
 
         modelState = {
             "experimentName": experiment,
-            "dataFile": dataFile,
             "Epoch": STEP + 1,
             "State_Dictionary": model.state_dict(),
             "Optimizer": optimizer.state_dict(),
@@ -138,13 +184,15 @@ def train(args):
         }
 
         print("Epoch " + str(STEP + 1) + " Training Loss: " + str(epochLoss / len(trainData)) + " | Learning Rate: " + str(optimizer.param_groups[0]['lr']))
+        evaluate(args, model, device, modelState)
         saveCheckPoint(model, device, modelState)
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--experiment", required=True, type=str)
 parser.add_argument("--numClasses", default=100, type=int)
-parser.add_argument("--dataFile", default="../data/train_cls.txt", type=str)
+parser.add_argument("--trainFile", default="../data/train_cls.txt", type=str)
+parser.add_argument("--valFile", default="../data/val_cls.txt", type=str)
 
 parser.add_argument("--root", default="../data", type=str)
 parser.add_argument("--numEpoch", default=100, type=int)

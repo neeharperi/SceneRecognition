@@ -17,18 +17,19 @@ import pickle
 import pdb 
 
 class SceneRecognitionDataLoader(Dataset):
-    def __init__(self, file, task, root, featureExtractor):
+    def __init__(self, file, task, root, mode, featureExtractor):
         self.file = open(file)
         self.root = root
+        self.mode = mode
         self.featureExtractor = featureExtractor
         self.featureFiles = []
+        self.imageFiles = []
 
         for line in self.file:
             ID, imgFile = line.split(" ")
             ID = int(ID)
-            featureFile = imgFile.strip("\n").replace("places365_standard", "features").replace("jpg", "pkl")
 
-            if "openset" in task:
+            if mode == "train" and task == "openset":
                 if ID < 50:
                     pass 
 
@@ -38,6 +39,16 @@ class SceneRecognitionDataLoader(Dataset):
                 else:
                     continue 
 
+            if mode == "val" and task == "openset":
+                if ID < 50:
+                    pass 
+
+                elif ID >= 50:
+                    ID = 50
+
+            self.imageFiles.append((ID, imgFile))
+            
+            featureFile = imgFile.strip("\n").replace("places365_standard", "features").replace("jpg", "pkl")
             self.featureFiles.append((ID, featureFile))
 
     def __len__(self):
@@ -45,12 +56,16 @@ class SceneRecognitionDataLoader(Dataset):
 
     def __getitem__(self, index):
         ID, featureFile = self.featureFiles[index]
+        _, imgFile = self.imageFiles[index]
         feats = pickle.load(open(self.root + "/" + featureFile, "rb"))[self.featureExtractor]
 
         feats = torch.tensor(feats).float()
         ID = torch.tensor(ID)
 
-        return feats, ID
+        if self.mode == "train":
+            return feats, ID
+        else:
+            return feats, ID, imgFile
 
 class NN(nn.Module):
     def __init__(self, numFeats, numClasses):
@@ -67,11 +82,45 @@ def saveCheckPoint(model, device, modelState):
 
     return model.to(device)
 
+def evaluate(args, model, device, modelState, featureExtractor ):
+    experiment = args.experiment
+    valFile = args.valFile
+    root = args.root
+    BATCHSIZE = args.batchSize
+    WORKERS = args.workers
+
+    if not os.path.isdir("../evaluate/nn/" + experiment + "/"):
+        os.makedirs("../evaluate/nn/" + experiment + "/")
+
+    fileName = "../evaluate/nn/" + modelState["experimentName"] + "/modelCheckPoint" + str(modelState["Epoch"]) + ".txt"
+
+    file = open(fileName, "w")
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    ValDataset = SceneRecognitionDataLoader(valFile, experiment, root, "val", featureExtractor)
+    valData = DataLoader(ValDataset, batch_size=BATCHSIZE, shuffle=False, num_workers=WORKERS)
+
+    model.eval()
+
+    with torch.no_grad():
+        for data in valData:
+            feats, target, imgFile = data
+
+            feats = feats.to(device)
+            target = target.to(device)
+
+            pred = torch.argmax(model(feats), axis=1)
+            
+            for predID, predFile in zip(pred, imgFile):
+                file.write(str(predID.item()) + " " + predFile + "\n")                
+
+    file.close()
+
 def train(args):
     experiment = args.experiment
     featureExtractor = args.featureExtractor
     numClasses = args.numClasses
-    dataFile = args.dataFile
+    trainFile = args.trainFile
     root = args.root
     BATCHSIZE = args.batchSize
     EPOCH = args.numEpoch
@@ -95,7 +144,7 @@ def train(args):
     pprint(vars(args))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    TrainDataset = SceneRecognitionDataLoader(dataFile, experiment, root, featureExtractor)
+    TrainDataset = SceneRecognitionDataLoader(trainFile, experiment, root, "train", featureExtractor)
     trainData = DataLoader(TrainDataset, batch_size=BATCHSIZE, shuffle=True, num_workers=WORKERS)
 
     model = NN(numFeatures, numClasses)
@@ -129,7 +178,6 @@ def train(args):
 
         modelState = {
             "experimentName": experiment,
-            "dataFile": dataFile,
             "Epoch": STEP + 1,
             "State_Dictionary": model.state_dict(),
             "Optimizer": optimizer.state_dict(),
@@ -141,16 +189,16 @@ def train(args):
         }
 
         print("Epoch " + str(STEP + 1) + " Training Loss: " + str(epochLoss / len(trainData)) + " | Learning Rate: " + str(optimizer.param_groups[0]['lr']))
-
+        evaluate(args, model, device, modelState, featureExtractor)
         saveCheckPoint(model, device, modelState)
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--experiment", required=True, type=str)
 parser.add_argument("--featureExtractor", required=True, type=str)
-
 parser.add_argument("--numClasses", default=100, type=int)
-parser.add_argument("--dataFile", default="../data/train_cls.txt", type=str)
+parser.add_argument("--trainFile", default="../data/train_cls.txt", type=str)
+parser.add_argument("--valFile", default="../data/val_cls.txt", type=str)
 
 parser.add_argument("--root", default="../data", type=str)
 parser.add_argument("--numEpoch", default=100, type=int)
