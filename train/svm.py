@@ -1,7 +1,6 @@
 import os 
 import argparse
 import os
-import sys
 from pprint import pprint
 from PIL import Image
 import numpy as np
@@ -48,23 +47,24 @@ class SceneRecognitionDataLoader():
         feats_pts = []
         id_pts = []
         img_files = []
-
+        
         for index in range(len(self.featureFiles)):
             ID, featureFile = self.featureFiles[index]
             _, imgFile = self.imageFiles[index]
             feats = pickle.load(open(self.root + "/" + featureFile, "rb"))[self.featureExtractor]
 
-            feats = np.array(feats).float()
+            feats = np.array(feats)#.astype(np.float)
+            #print(feats.shape)
             ID = np.array(ID)
 
             feats_pts.append(feats)
             id_pts.append(ID)
-            img_files.append(img_files)
+            img_files.append(featureFile)
 
         if self.mode == "train":
-            return np.asarray(feats), np.asarray(ID)
+            return feats_pts, id_pts
         else:
-            return np.asarray(feats), np.asarray(ID), img_files
+            return feats_pts, id_pts, img_files
 
 def evaluate(args, model, featureExtractor ):
     experiment = args.experiment
@@ -83,7 +83,7 @@ def evaluate(args, model, featureExtractor ):
     feats, _, imgs = ValDataset.get_x_y_pts()
     preds = model.predict(feats)
     for predID, predFile in zip(preds, imgs):
-        file.write(str(predID.item()) + " " + predFile + "\n")                
+        file.write(str(predID) + " " + str(predFile) + "\n")                
 
     file.close()
 
@@ -104,7 +104,9 @@ def train(args):
     feats, labels = TrainDataset.get_x_y_pts()
 
     model = SVC(gamma='auto')
+
     model.fit(feats, labels)
+
     pickle.dump(model, open("../models/svm/" + experiment + "/svm.pkl", 'wb'))
 
     evaluate(args, model, featureExtractor)
