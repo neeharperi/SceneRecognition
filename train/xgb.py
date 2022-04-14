@@ -4,7 +4,9 @@ import os
 from pprint import pprint
 from PIL import Image
 import numpy as np
-from sklearn.cluster import KMeans
+import xgboost
+from xgboost import XGBClassifier
+assert(xgboost.__version__ < '1.3')
 import pickle
 
 class SceneRecognitionDataLoader():
@@ -62,9 +64,9 @@ class SceneRecognitionDataLoader():
             img_files.append(featureFile)
 
         if self.mode == "train":
-            return feats_pts, id_pts
+            return np.array(feats_pts), np.array(id_pts)
         else:
-            return feats_pts, id_pts, img_files
+            return np.array(feats_pts), np.array(id_pts), img_files
 
 def evaluate(args, model, featureExtractor ):
     experiment = args.experiment
@@ -72,10 +74,10 @@ def evaluate(args, model, featureExtractor ):
     root = args.root
     task = args.task
 
-    if not os.path.isdir("../evaluate/kmeans/" + experiment + "/"):
-        os.makedirs("../evaluate/kmeans/" + experiment + "/")
+    if not os.path.isdir("../evaluate/xgb/" + experiment + "/"):
+        os.makedirs("../evaluate/xgb/" + experiment + "/")
 
-    fileName = "../evaluate/kmeans/" + experiment + "/kmeans_eval.txt"
+    fileName = "../evaluate/xgb/" + experiment + "/xgb_eval.txt"
 
     file = open(fileName, "w")
 
@@ -94,20 +96,18 @@ def train(args):
     root = args.root
     task = args.task
 
-    if not os.path.isdir("../models/kmeans/" + experiment + "/"):
-        os.makedirs("../models/kmeans/" + experiment + "/")
+    if not os.path.isdir("../models/xgb/" + experiment + "/"):
+        os.makedirs("../models/xgb/" + experiment + "/")
 
     print("Using Parameters:")
     pprint(vars(args))
 
     TrainDataset = SceneRecognitionDataLoader(trainFile, task, root, "train", featureExtractor)
     feats, labels = TrainDataset.get_x_y_pts()
-
-    model = KMeans(n_clusters=(np.unique(labels)).shape[0])
-
+    model = XGBClassifier()
     model.fit(feats, labels)
 
-    pickle.dump(model, open("../models/kmeans/" + experiment + "/kmeans.pkl", 'wb'))
+    pickle.dump(model, open("../models/xgb/" + experiment + "/xgb.pkl", 'wb'))
 
     evaluate(args, model, featureExtractor)
 
