@@ -61,7 +61,7 @@ class SceneRecognitionDataLoader():
 
             feats_pts.append(feats)
             id_pts.append(ID)
-            img_files.append(featureFile)
+            img_files.append(imgFile)
 
         if self.mode == "train":
             return np.array(feats_pts), np.array(id_pts)

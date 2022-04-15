@@ -23,3 +23,10 @@ python kmeans.py --experiment clip_kmeans_standard --featureExtractor CLIP
 python kmeans.py --experiment clip_kmeans_openset --featureExtractor CLIP
 python kmeans.py --experiment resnet_kmeans_standard --featureExtractor RESNET
 python kmeans.py --experiment resnet_kmeans_openset --featureExtractor RESNET
+
+python svm.py --experiment vit_svm_standard --featureExtractor VIT
+python svm.py --experiment vit_svm_openset --featureExtractor VIT
+python svm.py --experiment clip_svm_standard --featureExtractor CLIP
+python svm.py --experiment clip_svm_openset --featureExtractor CLIP
+python svm.py --experiment resnet_svm_standard --featureExtractor RESNET
+python svm.py --experiment resnet_svm_openset --featureExtractor RESNET
