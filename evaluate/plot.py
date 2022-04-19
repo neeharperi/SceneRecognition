@@ -69,13 +69,13 @@ def get_accuracy(file_name, mode):
         return evaluate(file_name, "openset")[1]
 
 def plot_models():
-    EVAL_MODES = ["standard", "openset", "closed_set"]
+    EVAL_MODES = ["standard", "openset", "closedset"]
     SINGLE_MODELS = ["kmeans", "svm", "xgb"]
     EXTRACTOR_LAYERS = ["clip", "resnet", "vit"]
     NUM_EPOCHS = 100
     
     for mode in EVAL_MODES:
-        file_mode = mode if mode!="closed_set" else "openset"
+        file_mode = mode if mode!="closedset" else "openset"
         # nn_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
         # nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
 
@@ -95,7 +95,9 @@ def plot_models():
             for model in model_mapping:
                 plt.axhline(y=model_mapping[model], linestyle='-', label=model, color=COLORS[c])
                 c += 1
-            plt.title(f"Comparison for {layer} extraction layer")
+            plt.title(f"Comparison for {layer} extraction layer in {mode} mode")
+            plt.xlabel("Epoch")
+            plt.ylabel("Accuracy")
             plt.legend()
             plt.xlim((0, 100))
             plt.savefig(f"../plots/{layer}_{mode}.png")
