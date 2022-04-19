@@ -4,3 +4,4 @@ models/nn/*
 models/baseline/*
 evaluate/nn/*
 evaluate/baseline/*
+plots/
