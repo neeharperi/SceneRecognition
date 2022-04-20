@@ -76,20 +76,20 @@ def plot_models():
     
     for mode in EVAL_MODES:
         file_mode = mode if mode!="closed_set" else "openset"
-        # nn_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
-        # nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
 
         for layer in EXTRACTOR_LAYERS:
-            # nn_epoch_accs = [get_accuracy(f"nn/{str(layer)}_nn_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+            nn_epoch_accs = [get_accuracy(f"nn/{str(layer)}_nn_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
             model_mapping = {}
             for model in SINGLE_MODELS:
                 file_name = f"{model}/{layer}_{model}_{file_mode}/{model}_eval.txt"
                 model_mapping[model] = get_accuracy(file_name, mode)
             
             plt.clf()
-            # plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_resnet_accs, label="resnet_baseline")
-            # plt.plot([i+1 for i in range(NUM_EPOCHS+1)], nn_pretrained_resnet_accs, label="resnet_pretrained")
-            # plt.plot([i+1 for i in range(NUM_EPOCHS+1)], nn_epoch_accs, label="nn")
+            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_resnet_accs, label="resnet_baseline")
+            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_pretrained_resnet_accs, label="resnet_pretrained")
+            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_epoch_accs, label="nn")
             COLORS = ["green", "red", "orange"]
             c = 0
             for model in model_mapping:
