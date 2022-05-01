@@ -11,7 +11,7 @@ def evaluate(args):
     for line in predFile:
         ID, fileName = line.split(" ")
         fileName = fileName.strip("\n")
-        ID = int(ID)
+        ID = int(float(ID))
 
         pred[fileName] = ID
 

@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
-predFile = open("xgb/clip_xgb_standard/xgb_eval.txt", "r")
+predFile = open("kmeans/resnet_kmeans_standard/kmeans_eval.txt", "r")
 gtFile = open("../data/val_cls.txt", "r")
 
 pred, gt = {}, {}
@@ -14,7 +14,7 @@ pred, gt = {}, {}
 for line in predFile:
     ID, fileName = line.split(" ")
     fileName = fileName.strip("\n")
-    ID = int(ID)
+    ID = int(float(ID))
     pred[fileName] = ID
 
 for line in gtFile:

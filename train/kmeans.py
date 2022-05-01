@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 from sklearn.cluster import KMeans
 import pickle
-
+import statistics
 class SceneRecognitionDataLoader():
     def __init__(self, file, task, root, mode, featureExtractor):
         self.file = open(file)
@@ -76,14 +76,15 @@ def evaluate(args, model, featureExtractor ):
         os.makedirs("../evaluate/kmeans/" + experiment + "/")
 
     fileName = "../evaluate/kmeans/" + experiment + "/kmeans_eval.txt"
-
+    mapp = np.load("../models/kmeans/" + experiment + "/map.npy")
     file = open(fileName, "w")
 
     ValDataset = SceneRecognitionDataLoader(valFile, task, root, "val", featureExtractor)
     feats, _, imgs = ValDataset.get_x_y_pts()
     preds = model.predict(feats)
     for predID, predFile in zip(preds, imgs):
-        file.write(str(predID) + " " + str(predFile) + "\n")                
+        prediction = int(float(mapp[int(predID)-1]))
+        file.write(str(prediction) + " " + str(predFile) + "\n")                
 
     file.close()
 
@@ -107,6 +108,15 @@ def train(args):
 
     model.fit(feats, labels)
 
+    feat_pred = model.predict(feats)
+    print(feat_pred.size) 
+    #mapp is map index: cluster number-1 element: label in true label
+    mapp = np.zeros(int(feat_pred.size/10))
+    for i in range(int(feat_pred.size/10)):
+        prediction= max([p[0] for p in statistics._counts(feat_pred[i*10:i*10+10])])
+        #prediction = mode(feat_pred[i*10:i*10+10])
+        mapp[prediction-1] = i
+    np.save("../models/kmeans/" + experiment + "/map.npy", mapp)
     pickle.dump(model, open("../models/kmeans/" + experiment + "/kmeans.pkl", 'wb'))
 
     evaluate(args, model, featureExtractor)
