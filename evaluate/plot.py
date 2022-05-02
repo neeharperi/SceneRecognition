@@ -9,9 +9,9 @@ def evaluate(file_name, eval_type):
     for line in predFile:
         ID, fileName = line.split(" ")
         fileName = fileName.strip("\n")
-        ID = int(ID)
+        ID = float(ID)
 
-        pred[fileName] = ID
+        pred[fileName] = int(ID)
 
     for line in gtFile:
         ID, fileName = line.split(" ")
@@ -100,6 +100,7 @@ def plot_models():
             plt.ylabel("Accuracy")
             plt.legend()
             plt.xlim((0, 100))
+            plt.savefig(f"../plots/{layer}_{mode}.eps")
             plt.savefig(f"../plots/{layer}_{mode}.png")
 
 
