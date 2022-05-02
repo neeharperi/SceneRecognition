@@ -8,6 +8,7 @@ from pytorch_pretrained_vit import ViT
 import pickle
 from tqdm import tqdm
 from PIL import Image
+import argparse
 
 class ResNet(nn.Module):
     def __init__(self):
@@ -17,6 +18,11 @@ class ResNet(nn.Module):
     def forward(self, img):
         return self.feats(img)
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--extended", default=False, action='store_true')
+
+args = parser.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -37,7 +43,7 @@ if not os.path.isdir(save_root):
     
 for split in splits:
     data_root = "../data/"
-    fileNames = open(data_root + split + "_cls.txt")
+    fileNames = open(data_root + split + "_extended_cls.txt") if args.extended else open(data_root + split + "_cls.txt")
 
     for line in tqdm(fileNames):
         _, loc = line.split()
