@@ -68,6 +68,20 @@ def get_accuracy(file_name, mode):
     else:
         return evaluate(file_name, "openset")[1]
 
+def list_to_increasing_list(arr, epochs):
+    x_arr = []
+    y_arr = []
+    max_val = arr[0]
+    for i in range(epochs):
+        if arr[i]>= max_val:
+            x_arr.append(i+1)
+            y_arr.append(arr[i])
+            max_val = arr[i]
+        elif i == epochs-1:
+            x_arr.append(epochs)
+            y_arr.append(max_val)
+    return x_arr, y_arr
+
 def plot_models():
     EVAL_MODES = ["standard", "openset", "closed_set"]
     SINGLE_MODELS = ["kmeans", "svm", "xgb"]
@@ -89,11 +103,16 @@ def plot_models():
                 model_mapping[model] = get_accuracy(file_name, mode)
             
             plt.clf()
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_resnet_accs, label="resnet_baseline")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_pretrained_resnet_accs, label="resnet_pretrained")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_resnet_self_train_accs, label="resnet_selftrain")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_pretrained_resnet_self_train_accs, label="resnet_selftrain_pretrained")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_epoch_accs, label="nn")
+            resnet_baseline_x, resnet_baseline_y = list_to_increasing_list(nn_resnet_accs, NUM_EPOCHS)
+            plt.plot(resnet_baseline_x, resnet_baseline_y, label="resnet_baseline")
+            resnet_pretrained_baseline_x, resnet_pretrained_baseline_y = list_to_increasing_list(nn_pretrained_resnet_accs, NUM_EPOCHS)
+            plt.plot(resnet_pretrained_baseline_x, resnet_pretrained_baseline_y, label="resnet_pretrained")
+            resnet_selftrain_x, resnet_selftrain_y = list_to_increasing_list(nn_resnet_self_train_accs, NUM_EPOCHS)
+            plt.plot(resnet_selftrain_x, resnet_selftrain_y, label="resnet_selftrain")
+            resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y = list_to_increasing_list(nn_pretrained_resnet_self_train_accs, NUM_EPOCHS)
+            plt.plot(resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y, label="resnet_selftrain_pretrained")
+            nn_x, nn_y = list_to_increasing_list(nn_epoch_accs, NUM_EPOCHS)
+            plt.plot(nn_x, nn_y, label="nn")
             COLORS = ["green", "red", "orange"]
             c = 0
             for model in model_mapping:
