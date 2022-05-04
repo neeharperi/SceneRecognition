@@ -9,9 +9,9 @@ def evaluate(file_name, eval_type):
     for line in predFile:
         ID, fileName = line.split(" ")
         fileName = fileName.strip("\n")
-        ID = int(ID)
+        ID = float(ID)
 
-        pred[fileName] = ID
+        pred[fileName] = int(ID)
 
     for line in gtFile:
         ID, fileName = line.split(" ")
@@ -68,6 +68,20 @@ def get_accuracy(file_name, mode):
     else:
         return evaluate(file_name, "openset")[1]
 
+def list_to_increasing_list(arr, epochs):
+    x_arr = []
+    y_arr = []
+    max_val = arr[0]
+    for i in range(epochs):
+        if arr[i]>= max_val:
+            x_arr.append(i+1)
+            y_arr.append(arr[i])
+            max_val = arr[i]
+        elif i == epochs-1:
+            x_arr.append(epochs)
+            y_arr.append(max_val)
+    return x_arr, y_arr
+
 def plot_models():
     EVAL_MODES = ["standard", "openset", "closed_set"]
     SINGLE_MODELS = ["kmeans", "svm", "xgb"]
@@ -78,6 +92,8 @@ def plot_models():
         file_mode = mode if mode!="closed_set" else "openset"
         nn_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
         nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_pretrained_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
 
         for layer in EXTRACTOR_LAYERS:
             nn_epoch_accs = [get_accuracy(f"nn/{str(layer)}_nn_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
@@ -87,9 +103,16 @@ def plot_models():
                 model_mapping[model] = get_accuracy(file_name, mode)
             
             plt.clf()
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_resnet_accs, label="resnet_baseline")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_pretrained_resnet_accs, label="resnet_pretrained")
-            plt.plot([i+1 for i in range(NUM_EPOCHS)], nn_epoch_accs, label="nn")
+            resnet_baseline_x, resnet_baseline_y = list_to_increasing_list(nn_resnet_accs, NUM_EPOCHS)
+            plt.plot(resnet_baseline_x, resnet_baseline_y, label="resnet_baseline")
+            resnet_pretrained_baseline_x, resnet_pretrained_baseline_y = list_to_increasing_list(nn_pretrained_resnet_accs, NUM_EPOCHS)
+            plt.plot(resnet_pretrained_baseline_x, resnet_pretrained_baseline_y, label="resnet_pretrained")
+            resnet_selftrain_x, resnet_selftrain_y = list_to_increasing_list(nn_resnet_self_train_accs, NUM_EPOCHS)
+            plt.plot(resnet_selftrain_x, resnet_selftrain_y, label="resnet_selftrain")
+            resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y = list_to_increasing_list(nn_pretrained_resnet_self_train_accs, NUM_EPOCHS)
+            plt.plot(resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y, label="resnet_selftrain_pretrained")
+            nn_x, nn_y = list_to_increasing_list(nn_epoch_accs, NUM_EPOCHS)
+            plt.plot(nn_x, nn_y, label="nn")
             COLORS = ["green", "red", "orange"]
             c = 0
             for model in model_mapping:
@@ -100,6 +123,7 @@ def plot_models():
             plt.ylabel("Accuracy")
             plt.legend()
             plt.xlim((0, 100))
+            plt.savefig(f"../plots/{layer}_{mode}.eps")
             plt.savefig(f"../plots/{layer}_{mode}.png")
 
 
