@@ -7,9 +7,9 @@ In recent years, deep learning techniques trained on increasingly large datasets
 
 
 
-##Data Visualization
-1. Under `viz` directory run `python visualizePCA.py` to get PCA visualization of 10 select classes 
-2. Under `viz` directory run `python visualizeTSNE.py` to get PCA visualization of 10 select classes 
+## Data Visualization
+* Under `viz` directory run `python visualizePCA.py` to get PCA visualization of 10 select classes 
+* Under `viz` directory run `python visualizeTSNE.py` to get PCA visualization of 10 select classes 
 
 ## Training
 1. For extracting and saving pre-trained features on which the classifiers are trained on, run `python extractFeatures.py` in the 'models' directory.  
