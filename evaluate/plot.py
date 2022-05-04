@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np 
+import pandas as pd
 
 def evaluate(file_name, eval_type):
     predFile = open(file_name, "r")
@@ -57,16 +58,15 @@ def evaluate(file_name, eval_type):
 
         closed_acc = closed_correct / closed_total
         open_acc = open_correct / open_total
-        return open_acc, closed_acc
+        acc = 0.5 * closed_acc + 0.5 * open_acc
+        return acc
 
 
 def get_accuracy(file_name, mode):
     if mode == "standard":
         return evaluate(file_name, "standard")
-    elif mode == "openset":
-        return evaluate(file_name, "openset")[0]
     else:
-        return evaluate(file_name, "openset")[1]
+        return evaluate(file_name, "openset")
 
 def list_to_increasing_list(arr, epochs):
     x_arr = []
@@ -83,40 +83,50 @@ def list_to_increasing_list(arr, epochs):
     return x_arr, y_arr
 
 def plot_models():
-    EVAL_MODES = ["standard", "openset", "closed_set"]
+    EVAL_MODES = ["standard", "openset"]
     SINGLE_MODELS = ["kmeans", "svm", "xgb"]
     EXTRACTOR_LAYERS = ["clip", "resnet", "vit"]
     NUM_EPOCHS = 100
-    
+    csv_arr = []
+
     for mode in EVAL_MODES:
-        file_mode = mode if mode!="closed_set" else "openset"
-        nn_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
-        nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
-        nn_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
-        nn_pretrained_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{file_mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_resnet_accs = [get_accuracy(f"baseline/resnet_{mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_pretrained_resnet_accs = [get_accuracy(f"baseline/resnet_{mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        nn_pretrained_resnet_self_train_accs = [get_accuracy(f"ensemble/resnet_selftrain_{mode}_pretrain/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+        
+        resnet_baseline_x, resnet_baseline_y = list_to_increasing_list(nn_resnet_accs, NUM_EPOCHS)
+        resnet_pretrained_baseline_x, resnet_pretrained_baseline_y = list_to_increasing_list(nn_pretrained_resnet_accs, NUM_EPOCHS)
+        resnet_selftrain_x, resnet_selftrain_y = list_to_increasing_list(nn_resnet_self_train_accs, NUM_EPOCHS)
+        resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y = list_to_increasing_list(nn_pretrained_resnet_self_train_accs, NUM_EPOCHS)
+
+        csv_arr.append({"mode": mode, "layer": "N/A", "model": "resnet_baseline", "acc": resnet_baseline_y[-1]})
+        csv_arr.append({"mode": mode, "layer": "N/A", "model": "resnet_baseline_pretrained", "acc": resnet_pretrained_baseline_y[-1]})
+        csv_arr.append({"mode": mode, "layer": "N/A", "model": "resnet_selftrain", "acc": resnet_selftrain_y[-1]})
+        csv_arr.append({"mode": mode, "layer": "N/A", "model": "resnet_selftrain_pretrained", "acc": resnet_selftrain_pretrained_y[-1]})
 
         for layer in EXTRACTOR_LAYERS:
-            nn_epoch_accs = [get_accuracy(f"nn/{str(layer)}_nn_{file_mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
+            nn_epoch_accs = [get_accuracy(f"nn/{str(layer)}_nn_{mode}/modelCheckPoint{str(i+1)}.txt", mode) for i in range(NUM_EPOCHS)]
             model_mapping = {}
             for model in SINGLE_MODELS:
-                file_name = f"{model}/{layer}_{model}_{file_mode}/{model}_eval.txt"
+                file_name = f"{model}/{layer}_{model}_{mode}/{model}_eval.txt"
                 model_mapping[model] = get_accuracy(file_name, mode)
             
             plt.clf()
-            resnet_baseline_x, resnet_baseline_y = list_to_increasing_list(nn_resnet_accs, NUM_EPOCHS)
             plt.plot(resnet_baseline_x, resnet_baseline_y, label="resnet_baseline")
-            resnet_pretrained_baseline_x, resnet_pretrained_baseline_y = list_to_increasing_list(nn_pretrained_resnet_accs, NUM_EPOCHS)
             plt.plot(resnet_pretrained_baseline_x, resnet_pretrained_baseline_y, label="resnet_pretrained")
-            resnet_selftrain_x, resnet_selftrain_y = list_to_increasing_list(nn_resnet_self_train_accs, NUM_EPOCHS)
             plt.plot(resnet_selftrain_x, resnet_selftrain_y, label="resnet_selftrain")
-            resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y = list_to_increasing_list(nn_pretrained_resnet_self_train_accs, NUM_EPOCHS)
             plt.plot(resnet_selftrain_pretrained_x, resnet_selftrain_pretrained_y, label="resnet_selftrain_pretrained")
             nn_x, nn_y = list_to_increasing_list(nn_epoch_accs, NUM_EPOCHS)
             plt.plot(nn_x, nn_y, label="nn")
+            
+            csv_arr.append({"mode": mode, "layer": layer, "model": "nn", "acc": nn_y[-1]})
+
             COLORS = ["green", "red", "orange"]
             c = 0
             for model in model_mapping:
                 plt.axhline(y=model_mapping[model], linestyle='-', label=model, color=COLORS[c])
+                csv_arr.append({"mode": mode, "layer": layer, "model": model, "acc": model_mapping[model]})
                 c += 1
             plt.title(f"Comparison for {layer} extraction layer in {mode} mode")
             plt.xlabel("Epoch")
@@ -125,6 +135,9 @@ def plot_models():
             plt.xlim((0, 100))
             plt.savefig(f"../plots/{layer}_{mode}.eps")
             plt.savefig(f"../plots/{layer}_{mode}.png")
+    df = pd.DataFrame.from_dict(csv_arr) 
+    df.to_csv (r'models.csv', index = False, header=True)
+
 
 
 if __name__ == "__main__":
