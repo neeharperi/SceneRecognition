@@ -61,7 +61,8 @@ def evaluate(args):
         closed_acc = closed_correct / closed_total
         open_acc = open_correct / open_total
 
-        print("{} | Closed-Set Accuracy: {} % | Open-Set Accuracy: {} %".format(args.predFile, 100 * closed_acc, 100 * open_acc))
+        acc = 0.5 * closed_acc + 0.5 * open_acc
+        print("{} | Classification Accuracy: {} %".format(args.predFile, 100 * acc))
 
     else:
         assert False, "Invalid eval_type"
